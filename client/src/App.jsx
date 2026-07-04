@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './index.css';
 
 // API Configuration
-const API_URL = 'http://localhost:5000';  // Changed back to localhost to match CORS
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function App() {
   const [currentView, setCurrentView] = useState('landing');
@@ -11,6 +11,7 @@ function App() {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [userData, setUserData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [onboardingData, setOnboardingData] = useState({
     personality: '',
     interests: [],
@@ -20,6 +21,30 @@ function App() {
   });
   const [isMatching, setIsMatching] = useState(false);
   const [matchResult, setMatchResult] = useState(null);
+  const [editProfileData, setEditProfileData] = useState({
+    name: '',
+    age: '',
+    personality: '',
+    interests: [],
+    goals: [],
+    expertise: [],
+    description: ''
+  });
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API_URL}/api/user/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(user => {
+        setUserData(user);
+        setCurrentView(user.onboardingCompleted ? 'dashboard' : 'verification');
+      })
+      .catch(() => localStorage.removeItem('token'));
+  }, []);
 
   // Personality options
   const personalityOptions = [
@@ -73,18 +98,19 @@ function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('token', data.token);
         setUserData(data.user);
-        
+
         // Check if user has completed onboarding
         if (data.user.onboardingCompleted) {
           setCurrentView('dashboard');
@@ -96,6 +122,8 @@ function App() {
       }
     } catch (error) {
       alert('Login failed. Is the server running?');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -224,6 +252,81 @@ function App() {
       }
       setIsMatching(false);
     }, 5000);
+  };
+
+  const fetchProfile = async () => {
+    setIsLoadingProfile(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/user/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEditProfileData({
+          name: data.name || '',
+          age: data.age ? String(data.age) : '',
+          personality: data.personality || '',
+          interests: data.interests?.map(ui => ui.interest.name) || [],
+          goals: data.UserGoal?.map(ug => ug.goal.name) || [],
+          expertise: data.UserExpertise?.map(ue => ue.expertise.name) || [],
+          description: data.description || ''
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    }
+    setIsLoadingProfile(false);
+  };
+
+  const handleEditProfileSubmit = async () => {
+    if (!editProfileData.personality) {
+      alert('Please select your personality type');
+      return;
+    }
+    if (editProfileData.interests.length < 3) {
+      alert('Please select at least 3 interests');
+      return;
+    }
+    if (editProfileData.goals.length === 0) {
+      alert('Please select at least one goal');
+      return;
+    }
+    if (editProfileData.expertise.length === 0) {
+      alert('Please select at least one area of expertise');
+      return;
+    }
+    if (editProfileData.description.trim().split(' ').filter(w => w).length > 30) {
+      alert('Description must be 30 words or less');
+      return;
+    }
+    if (editProfileData.description.trim().length < 10) {
+      alert('Please write a meaningful description of yourself');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/user/profile/full`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editProfileData)
+      });
+
+      if (response.ok) {
+        setUserData({ ...userData, name: editProfileData.name, age: parseInt(editProfileData.age) });
+        alert('Profile updated successfully!');
+        setCurrentView('dashboard');
+      } else {
+        alert('Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      alert('Error updating profile. Please check your connection.');
+    }
   };
 
   // Government Verification View
@@ -498,9 +601,10 @@ function App() {
             />
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-lg font-semibold hover:shadow-xl transition"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-lg font-semibold hover:shadow-xl transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Login
+              {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
           <p className="text-center text-purple-200 mt-4">
@@ -588,6 +692,198 @@ function App() {
     );
   }
 
+  // Edit Profile View
+  if (currentView === 'editProfile') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-white">Edit Profile</h2>
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="text-purple-200 hover:text-white transition"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {isLoadingProfile ? (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4 animate-pulse">Loading...</div>
+                <p className="text-purple-200">Fetching your profile...</p>
+              </div>
+            ) : (
+              <>
+                {/* Basic Info */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">Basic Information</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={editProfileData.name}
+                        onChange={(e) => setEditProfileData({...editProfileData, name: e.target.value})}
+                        className="w-full p-4 rounded-lg bg-white/20 text-white placeholder-purple-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-1">Age</label>
+                      <input
+                        type="number"
+                        value={editProfileData.age}
+                        onChange={(e) => setEditProfileData({...editProfileData, age: e.target.value})}
+                        className="w-full p-4 rounded-lg bg-white/20 text-white placeholder-purple-200"
+                        min="18"
+                        max="120"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personality */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">1. How would you describe yourself?</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {personalityOptions.map(option => (
+                      <div
+                        key={option.id}
+                        onClick={() => setEditProfileData({...editProfileData, personality: option.id})}
+                        className={`p-4 rounded-lg cursor-pointer transition ${
+                          editProfileData.personality === option.id
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                        }`}
+                      >
+                        <div className="font-semibold">{option.label}</div>
+                        <div className="text-sm mt-1 opacity-90">{option.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interests */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">
+                    2. Select your interests (at least 3)
+                  </h3>
+                  {Object.entries(interestCategories).map(([category, items]) => (
+                    <div key={category} className="mb-4">
+                      <h4 className="text-purple-200 mb-2">{category}</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map(interest => (
+                          <button
+                            key={interest}
+                            onClick={() => {
+                              const interests = editProfileData.interests.includes(interest)
+                                ? editProfileData.interests.filter(i => i !== interest)
+                                : [...editProfileData.interests, interest];
+                              setEditProfileData({...editProfileData, interests});
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm transition ${
+                              editProfileData.interests.includes(interest)
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                            }`}
+                          >
+                            {interest}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Goals */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">3. What are your goals?</h3>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    {goalOptions.map(goal => (
+                      <button
+                        key={goal}
+                        onClick={() => {
+                          const goals = editProfileData.goals.includes(goal)
+                            ? editProfileData.goals.filter(g => g !== goal)
+                            : [...editProfileData.goals, goal];
+                          setEditProfileData({...editProfileData, goals});
+                        }}
+                        className={`px-4 py-3 rounded-lg text-sm transition ${
+                          editProfileData.goals.includes(goal)
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                        }`}
+                      >
+                        {goal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Expertise */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">4. What knowledge can you share?</h3>
+                  <div className="space-y-3">
+                    {expertiseOptions.map(expertise => (
+                      <button
+                        key={expertise}
+                        onClick={() => {
+                          const expertiseList = editProfileData.expertise.includes(expertise)
+                            ? editProfileData.expertise.filter(e => e !== expertise)
+                            : [...editProfileData.expertise, expertise];
+                          setEditProfileData({...editProfileData, expertise: expertiseList});
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-lg transition ${
+                          editProfileData.expertise.includes(expertise)
+                            ? 'bg-purple-500 text-white'
+                            : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                        }`}
+                      >
+                        {expertise}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-4">
+                    5. Describe yourself in one sentence (30 words max)
+                  </h3>
+                  <textarea
+                    value={editProfileData.description}
+                    onChange={(e) => setEditProfileData({...editProfileData, description: e.target.value})}
+                    placeholder="I'm a curious soul who loves deep conversations about technology and philosophy..."
+                    className="w-full p-4 rounded-lg bg-white/20 text-white placeholder-purple-200 resize-none"
+                    rows="3"
+                  />
+                  <div className="text-purple-200 text-sm mt-2">
+                    Words: {editProfileData.description.trim().split(' ').filter(w => w).length}/30
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleEditProfileSubmit}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-lg font-semibold hover:shadow-xl transition"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className="px-8 bg-white/20 text-white py-4 rounded-lg font-semibold hover:bg-white/30 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Dashboard View
   if (currentView === 'dashboard') {
     return (
@@ -614,6 +910,15 @@ function App() {
                   {userData?.name || 'User'}<br/>
                   Age: {userData?.age || 'N/A'}
                 </p>
+                <button
+                  onClick={() => {
+                    fetchProfile();
+                    setCurrentView('editProfile');
+                  }}
+                  className="mt-3 bg-purple-500/50 text-white px-4 py-2 rounded-lg hover:bg-purple-500 transition text-sm"
+                >
+                  Edit Profile
+                </button>
               </div>
               
               <div className="bg-white/10 rounded-lg p-6">

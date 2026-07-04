@@ -37,7 +37,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
@@ -169,6 +172,16 @@ app.get('/api/user/profile', authenticateToken, async (req: any, res) => {
             interest: true
           }
         },
+        UserGoal: {
+          include: {
+            goal: true
+          }
+        },
+        UserExpertise: {
+          include: {
+            expertise: true
+          }
+        },
         groups: {
           include: {
             group: true
@@ -205,6 +218,92 @@ app.put('/api/user/profile', authenticateToken, async (req: any, res) => {
     res.json(user);
   } catch (error) {
     console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.put('/api/user/profile/full', authenticateToken, async (req: any, res) => {
+  try {
+    const { name, age, personality, interests, goals, expertise, description } = req.body;
+    const userId = req.user.userId;
+
+    // Update basic user fields
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        age: age ? parseInt(age) : undefined,
+        personality,
+        description
+      }
+    });
+
+    // Update interests
+    if (interests && interests.length > 0) {
+      await prisma.userInterest.deleteMany({ where: { userId } });
+
+      for (const interestName of interests) {
+        let interest = await prisma.interest.findFirst({
+          where: { name: interestName }
+        });
+
+        if (!interest) {
+          interest = await prisma.interest.create({
+            data: { name: interestName, category: 'User Generated' }
+          });
+        }
+
+        await prisma.userInterest.create({
+          data: { userId, interestId: interest.id }
+        });
+      }
+    }
+
+    // Update goals
+    if (goals && goals.length > 0) {
+      await prisma.userGoal.deleteMany({ where: { userId } });
+
+      for (const goalName of goals) {
+        let goal = await prisma.goal.findFirst({
+          where: { name: goalName }
+        });
+
+        if (!goal) {
+          goal = await prisma.goal.create({
+            data: { name: goalName }
+          });
+        }
+
+        await prisma.userGoal.create({
+          data: { userId, goalId: goal.id }
+        });
+      }
+    }
+
+    // Update expertise
+    if (expertise && expertise.length > 0) {
+      await prisma.userExpertise.deleteMany({ where: { userId } });
+
+      for (const expertiseName of expertise) {
+        let exp = await prisma.expertise.findFirst({
+          where: { name: expertiseName }
+        });
+
+        if (!exp) {
+          exp = await prisma.expertise.create({
+            data: { name: expertiseName }
+          });
+        }
+
+        await prisma.userExpertise.create({
+          data: { userId, expertiseId: exp.id }
+        });
+      }
+    }
+
+    res.json({ success: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Profile full update error:', error);
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
@@ -259,10 +358,8 @@ app.post('/api/user/onboarding', authenticateToken, async (req: any, res) => {
 
     // Handle interests
     if (interests && interests.length > 0) {
-      // Remove existing interests
       await prisma.userInterest.deleteMany({ where: { userId } });
 
-      // Add new interests
       for (const interestName of interests) {
         let interest = await prisma.interest.findFirst({
           where: { name: interestName }
@@ -282,6 +379,48 @@ app.post('/api/user/onboarding', authenticateToken, async (req: any, res) => {
             userId,
             interestId: interest.id
           }
+        });
+      }
+    }
+
+    // Handle goals
+    if (goals && goals.length > 0) {
+      await prisma.userGoal.deleteMany({ where: { userId } });
+
+      for (const goalName of goals) {
+        let goal = await prisma.goal.findFirst({
+          where: { name: goalName }
+        });
+
+        if (!goal) {
+          goal = await prisma.goal.create({
+            data: { name: goalName }
+          });
+        }
+
+        await prisma.userGoal.create({
+          data: { userId, goalId: goal.id }
+        });
+      }
+    }
+
+    // Handle expertise
+    if (expertise && expertise.length > 0) {
+      await prisma.userExpertise.deleteMany({ where: { userId } });
+
+      for (const expertiseName of expertise) {
+        let exp = await prisma.expertise.findFirst({
+          where: { name: expertiseName }
+        });
+
+        if (!exp) {
+          exp = await prisma.expertise.create({
+            data: { name: expertiseName }
+          });
+        }
+
+        await prisma.userExpertise.create({
+          data: { userId, expertiseId: exp.id }
         });
       }
     }
