@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react';
+import {
+  Rocket, TrendingUp, Sprout, Heart,
+  Activity, Lightbulb, Palette,
+  Trophy, Mountain, HeartHandshake, Utensils, Plane, Leaf,
+  Laptop, Briefcase, Brain, Microscope, BookOpen, Scale, Landmark, Globe, TreePine, Languages, Building2,
+  Music, Gamepad2, Tv, Film, Camera, Paintbrush, Book, PenTool
+} from 'lucide-react';
 import './index.css';
 
 // API Configuration
@@ -56,30 +63,96 @@ function App() {
     { id: 'analytical', label: 'Analytical Mind', description: 'I approach problems logically and systematically' }
   ];
 
-  // Interest categories
-  const interestCategories = {
-    'Sports & Fitness': ['Badminton', 'Basketball', 'Soccer', 'Yoga', 'Running', 'Gym', 'Swimming', 'Cycling'],
-    'Science & Tech': ['Chemistry', 'Physics', 'AI/ML', 'Web Development', 'Biology', 'Space', 'Robotics'],
-    'Arts & Culture': ['Movies', 'Music', 'Photography', 'Painting', 'Literature', 'Theatre', 'Dance'],
-    'Current Affairs': ['Geopolitics', 'Economics', 'Climate Change', 'Social Issues', 'Technology Trends'],
-    'Hobbies': ['Gaming', 'Cooking', 'Gardening', 'Travel', 'Reading', 'Writing', 'Collecting'],
-    'Philosophy & Mind': ['Psychology', 'Philosophy', 'Meditation', 'Spirituality', 'Self-improvement']
-  };
+  // Interest categories with icons — pick top 5 (ranked)
+  const interestCategories = [
+    {
+      name: 'Active & Lifestyle',
+      icon: Activity,
+      items: [
+        { name: 'Sport', icon: Trophy },
+        { name: 'Outdoor & Adventure', icon: Mountain },
+        { name: 'Wellbeing', icon: HeartHandshake },
+        { name: 'Food & Drink', icon: Utensils },
+        { name: 'Travel', icon: Plane },
+        { name: 'Nature & Animals', icon: Leaf }
+      ]
+    },
+    {
+      name: 'Knowledge & Ideas',
+      icon: Lightbulb,
+      items: [
+        { name: 'Technology', icon: Laptop },
+        { name: 'Business', icon: Briefcase },
+        { name: 'Psychology', icon: Brain },
+        { name: 'Science', icon: Microscope },
+        { name: 'Humanities', icon: BookOpen },
+        { name: 'Law', icon: Scale },
+        { name: 'Politics', icon: Landmark },
+        { name: 'Social Impact', icon: Globe },
+        { name: 'Environment', icon: TreePine },
+        { name: 'Languages', icon: Languages },
+        { name: 'Architecture', icon: Building2 }
+      ]
+    },
+    {
+      name: 'Culture & Entertainment',
+      icon: Palette,
+      items: [
+        { name: 'Music', icon: Music },
+        { name: 'Gaming', icon: Gamepad2 },
+        { name: 'Media & Pop Culture', icon: Tv },
+        { name: 'Film & Video', icon: Film },
+        { name: 'Photography', icon: Camera },
+        { name: 'Art & Design', icon: Paintbrush },
+        { name: 'Reading', icon: Book },
+        { name: 'Writing', icon: PenTool }
+      ]
+    }
+  ];
 
-  // Goals
-  const goalOptions = [
-    'Self-improvement',
-    'Start a business',
-    'Find a job in tech',
-    'Find a job in finance',
-    'Self-discovery',
-    'Fitness & health',
-    'Build motivation',
-    'Knowledge expansion',
-    'Creative pursuits',
-    'Career transition',
-    'Build meaningful friendships',
-    'Learn new skills'
+  // Goals — pick ONE sub-goal only (matches you with people who picked the same)
+  const goalCategories = [
+    {
+      name: 'Build',
+      tagline: 'I want to create something',
+      icon: Rocket,
+      subGoals: [
+        'Launch a startup',
+        'Build a side project/app',
+        'Grow a brand/audience',
+        'Launch a social enterprise'
+      ]
+    },
+    {
+      name: 'Climb',
+      tagline: 'I want to advance my career',
+      icon: TrendingUp,
+      subGoals: [
+        'Land my first graduate role',
+        'Switch industries',
+        'Get promoted/grow in my current role',
+        'Build a professional skill set'
+      ]
+    },
+    {
+      name: 'Grow',
+      tagline: 'I want to become a better version of myself',
+      icon: Sprout,
+      subGoals: [
+        'Settling into a new city',
+        'Mental health & emotional wellbeing',
+        'Fitness & physical health',
+        'Building better habits & self-improvement'
+      ]
+    },
+    {
+      name: 'Passion',
+      tagline: 'I want to find my people',
+      icon: Heart,
+      subGoals: [
+        'Meet people with similar interests'
+      ]
+    }
   ];
 
   // Expertise areas
@@ -180,12 +253,12 @@ function App() {
       alert('Please select your personality type');
       return;
     }
-    if (onboardingData.interests.length < 3) {
-      alert('Please select at least 3 interests');
+    if (onboardingData.interests.length !== 5) {
+      alert('Please select and rank your top 5 interests');
       return;
     }
-    if (onboardingData.goals.length === 0) {
-      alert('Please select at least one goal');
+    if (onboardingData.goals.length !== 1) {
+      alert('Please select one sub-goal');
       return;
     }
     if (onboardingData.expertise.length === 0) {
@@ -389,60 +462,104 @@ function App() {
               </div>
             </div>
 
-            {/* Step 2: Interests */}
+            {/* Step 2: Goals */}
             <div className="mb-8">
-              <h3 className="text-xl font-semibold text-white mb-4">
-                2. Select your interests (at least 3)
-              </h3>
-              {Object.entries(interestCategories).map(([category, items]) => (
-                <div key={category} className="mb-4">
-                  <h4 className="text-purple-200 mb-2">{category}</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map(interest => (
-                      <button
-                        key={interest}
-                        onClick={() => {
-                          const interests = onboardingData.interests.includes(interest)
-                            ? onboardingData.interests.filter(i => i !== interest)
-                            : [...onboardingData.interests, interest];
-                          setOnboardingData({...onboardingData, interests});
-                        }}
-                        className={`px-4 py-2 rounded-full text-sm transition ${
-                          onboardingData.interests.includes(interest)
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-white/20 text-purple-100 hover:bg-white/30'
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <h3 className="text-xl font-semibold text-white mb-2">2. What's your goal right now?</h3>
+              <p className="text-sm text-purple-200 mb-4">
+                Select only 1 sub-goal — you'll only meet people who chose the same sub-goal.
+              </p>
+              <div className="space-y-4">
+                {goalCategories.map(cat => {
+                  const CatIcon = cat.icon;
+                  return (
+                    <div key={cat.name} className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <CatIcon className="w-6 h-6 text-purple-200" />
+                        <div>
+                          <div className="text-white font-semibold">{cat.name}</div>
+                          <div className="text-xs text-purple-200 italic">"{cat.tagline}"</div>
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-2">
+                        {cat.subGoals.map(sg => {
+                          const selected = onboardingData.goals[0] === sg;
+                          return (
+                            <button
+                              key={sg}
+                              onClick={() => setOnboardingData({...onboardingData, goals: [sg]})}
+                              className={`text-left px-4 py-3 rounded-lg text-sm transition ${
+                                selected
+                                  ? 'bg-purple-500 text-white ring-2 ring-white'
+                                  : 'bg-white/10 text-purple-100 hover:bg-white/20'
+                              }`}
+                            >
+                              {sg}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Step 3: Goals */}
+            {/* Step 3: Interests */}
             <div className="mb-8">
-              <h3 className="text-xl font-semibold text-white mb-4">3. What are your goals?</h3>
-              <div className="grid md:grid-cols-3 gap-3">
-                {goalOptions.map(goal => (
-                  <button
-                    key={goal}
-                    onClick={() => {
-                      const goals = onboardingData.goals.includes(goal)
-                        ? onboardingData.goals.filter(g => g !== goal)
-                        : [...onboardingData.goals, goal];
-                      setOnboardingData({...onboardingData, goals});
-                    }}
-                    className={`px-4 py-3 rounded-lg text-sm transition ${
-                      onboardingData.goals.includes(goal)
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-white/20 text-purple-100 hover:bg-white/30'
-                    }`}
-                  >
-                    {goal}
-                  </button>
-                ))}
+              <h3 className="text-xl font-semibold text-white mb-2">
+                3. Rank your top 5 interests
+              </h3>
+              <p className="text-sm text-purple-200 mb-4">
+                Pick from any category — the order you tap them becomes your rank (1–5).
+                <span className="ml-2 text-white font-medium">{onboardingData.interests.length}/5 selected</span>
+              </p>
+              <div className="space-y-4">
+                {interestCategories.map(cat => {
+                  const CatIcon = cat.icon;
+                  return (
+                    <div key={cat.name} className="bg-white/5 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CatIcon className="w-5 h-5 text-purple-200" />
+                        <h4 className="text-purple-100 font-semibold">{cat.name}</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {cat.items.map(item => {
+                          const ItemIcon = item.icon;
+                          const rank = onboardingData.interests.indexOf(item.name);
+                          const selected = rank !== -1;
+                          const atLimit = onboardingData.interests.length >= 5 && !selected;
+                          return (
+                            <button
+                              key={item.name}
+                              disabled={atLimit}
+                              onClick={() => {
+                                const interests = selected
+                                  ? onboardingData.interests.filter(i => i !== item.name)
+                                  : [...onboardingData.interests, item.name];
+                                setOnboardingData({...onboardingData, interests});
+                              }}
+                              className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                selected
+                                  ? 'bg-purple-500 text-white'
+                                  : atLimit
+                                    ? 'bg-white/10 text-purple-200/50 cursor-not-allowed'
+                                    : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                              }`}
+                            >
+                              <ItemIcon className="w-4 h-4" />
+                              <span>{item.name}</span>
+                              {selected && (
+                                <span className="ml-1 bg-white text-purple-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                  {rank + 1}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -763,60 +880,104 @@ function App() {
                   </div>
                 </div>
 
-                {/* Interests */}
-                <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">
-                    2. Select your interests (at least 3)
-                  </h3>
-                  {Object.entries(interestCategories).map(([category, items]) => (
-                    <div key={category} className="mb-4">
-                      <h4 className="text-purple-200 mb-2">{category}</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {items.map(interest => (
-                          <button
-                            key={interest}
-                            onClick={() => {
-                              const interests = editProfileData.interests.includes(interest)
-                                ? editProfileData.interests.filter(i => i !== interest)
-                                : [...editProfileData.interests, interest];
-                              setEditProfileData({...editProfileData, interests});
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm transition ${
-                              editProfileData.interests.includes(interest)
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-white/20 text-purple-100 hover:bg-white/30'
-                            }`}
-                          >
-                            {interest}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
                 {/* Goals */}
                 <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-white mb-4">3. What are your goals?</h3>
-                  <div className="grid md:grid-cols-3 gap-3">
-                    {goalOptions.map(goal => (
-                      <button
-                        key={goal}
-                        onClick={() => {
-                          const goals = editProfileData.goals.includes(goal)
-                            ? editProfileData.goals.filter(g => g !== goal)
-                            : [...editProfileData.goals, goal];
-                          setEditProfileData({...editProfileData, goals});
-                        }}
-                        className={`px-4 py-3 rounded-lg text-sm transition ${
-                          editProfileData.goals.includes(goal)
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-white/20 text-purple-100 hover:bg-white/30'
-                        }`}
-                      >
-                        {goal}
-                      </button>
-                    ))}
+                  <h3 className="text-xl font-semibold text-white mb-2">2. What's your goal right now?</h3>
+                  <p className="text-sm text-purple-200 mb-4">
+                    Select only 1 sub-goal — you'll only meet people who chose the same sub-goal.
+                  </p>
+                  <div className="space-y-4">
+                    {goalCategories.map(cat => {
+                      const CatIcon = cat.icon;
+                      return (
+                        <div key={cat.name} className="bg-white/5 rounded-xl p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <CatIcon className="w-6 h-6 text-purple-200" />
+                            <div>
+                              <div className="text-white font-semibold">{cat.name}</div>
+                              <div className="text-xs text-purple-200 italic">"{cat.tagline}"</div>
+                            </div>
+                          </div>
+                          <div className="grid md:grid-cols-2 gap-2">
+                            {cat.subGoals.map(sg => {
+                              const selected = editProfileData.goals[0] === sg;
+                              return (
+                                <button
+                                  key={sg}
+                                  onClick={() => setEditProfileData({...editProfileData, goals: [sg]})}
+                                  className={`text-left px-4 py-3 rounded-lg text-sm transition ${
+                                    selected
+                                      ? 'bg-purple-500 text-white ring-2 ring-white'
+                                      : 'bg-white/10 text-purple-100 hover:bg-white/20'
+                                  }`}
+                                >
+                                  {sg}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Interests */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    3. Rank your top 5 interests
+                  </h3>
+                  <p className="text-sm text-purple-200 mb-4">
+                    Pick from any category — the order you tap them becomes your rank (1–5).
+                    <span className="ml-2 text-white font-medium">{editProfileData.interests.length}/5 selected</span>
+                  </p>
+                  <div className="space-y-4">
+                    {interestCategories.map(cat => {
+                      const CatIcon = cat.icon;
+                      return (
+                        <div key={cat.name} className="bg-white/5 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CatIcon className="w-5 h-5 text-purple-200" />
+                            <h4 className="text-purple-100 font-semibold">{cat.name}</h4>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {cat.items.map(item => {
+                              const ItemIcon = item.icon;
+                              const rank = editProfileData.interests.indexOf(item.name);
+                              const selected = rank !== -1;
+                              const atLimit = editProfileData.interests.length >= 5 && !selected;
+                              return (
+                                <button
+                                  key={item.name}
+                                  disabled={atLimit}
+                                  onClick={() => {
+                                    const interests = selected
+                                      ? editProfileData.interests.filter(i => i !== item.name)
+                                      : [...editProfileData.interests, item.name];
+                                    setEditProfileData({...editProfileData, interests});
+                                  }}
+                                  className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    selected
+                                      ? 'bg-purple-500 text-white'
+                                      : atLimit
+                                        ? 'bg-white/10 text-purple-200/50 cursor-not-allowed'
+                                        : 'bg-white/20 text-purple-100 hover:bg-white/30'
+                                  }`}
+                                >
+                                  <ItemIcon className="w-4 h-4" />
+                                  <span>{item.name}</span>
+                                  {selected && (
+                                    <span className="ml-1 bg-white text-purple-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                                      {rank + 1}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
